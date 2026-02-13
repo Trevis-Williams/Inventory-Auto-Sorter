@@ -1,23 +1,32 @@
-# Inventory Tracker
+# Inventory Auto-Sorter
 
-A web-based inventory tracking application that allows you to upload CSV files, automatically map columns, and manage your inventory in a spreadsheet-like interface.
+A browser-based warehouse shelf organizer that imports inventory data, **learns** the correct ordering of items across shelves using statistical analysis, **detects misplaced items**, and **generates step-by-step reorganization plans** to fix them -- all without a server.
+
+**Live Demo:** [https://trevis-williams.github.io/Inventory-Auto-Sorter/](https://trevis-williams.github.io/Inventory-Auto-Sorter/)
 
 ## Features
 
-- **CSV Upload with Auto-Detection**: Drag-and-drop or select CSV files. The app automatically detects columns for Location, FBPN (Part Number), and Item Type using fuzzy matching.
-- **Column Mapping**: Preview and adjust column mappings before importing data.
-- **Spreadsheet View**: Edit inventory directly in an Excel-like grid powered by AG Grid.
-- **Numerical Sorting**: FBPN column is sorted numerically for easy part number ordering.
-- **Inline Editing**: Click any cell to edit values.
-- **Filtering & Sorting**: Filter and sort by any column.
-- **Data Persistence**: All data is stored locally in your browser (IndexedDB) - no server required.
-- **CSV Export**: Export your inventory back to CSV at any time.
+- **CSV Import with Auto-Detection** -- Drag-and-drop CSV files. Columns for location, part number, and item type are automatically detected via fuzzy matching.
+- **Pattern Learning** -- Analyzes part number distributions per shelf (medians, standard deviations, z-scores) to build a statistical model of where items belong. Confidence improves as more data is imported.
+- **Misplacement Detection** -- Flags items that are likely on the wrong shelf, ranked by priority (high / medium / low) based on how far they deviate from the learned pattern.
+- **Placement Suggestions** -- Enter a part number (manually or via barcode scanner) and get ranked suggestions for the best shelf location with confidence percentages and reasoning.
+- **Reorganization Planner** -- Generates move-by-move plans to correct all misplaced items, grouped by source shelf for efficiency. Tracks completion with checkboxes and can be exported as CSV, text, or printed.
+- **Spreadsheet View** -- Full AG Grid-powered inventory grid with inline editing, filtering, sorting, add/delete rows, and CSV export.
+- **Local Storage** -- All data persists in your browser via IndexedDB (Dexie.js). No account or backend needed.
+
+## How It Works
+
+1. **Upload** a CSV containing your inventory (location codes, part numbers, item types).
+2. **Map columns** -- review the auto-detected mappings and adjust if needed.
+3. **Dashboard** -- view learning confidence, misplaced items by priority, and quick actions.
+4. **Inventory tab** -- browse and edit all items in a spreadsheet interface.
+5. **Reorganize tab** -- generate, track, and export a reorganization plan to get your shelves in order.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ installed
+- Node.js 18+
 
 ### Installation
 
@@ -39,33 +48,28 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 npm run build
 ```
 
-The built files will be in the `dist` folder, ready to deploy to any static hosting service.
-
-## Usage
-
-1. **Upload a CSV**: Drag and drop a CSV file onto the upload area, or click to select a file.
-2. **Map Columns**: Review the auto-detected column mappings. Adjust if needed using the dropdowns.
-3. **Import**: Click "Import Data" to add the items to your inventory.
-4. **Edit**: Click any cell in the grid to edit values. Changes are saved automatically.
-5. **Add Rows**: Use the "Add Row" button to add new inventory items.
-6. **Delete**: Select rows and click "Delete Selected", or use the Delete button on individual rows.
-7. **Export**: Click "Export CSV" to download your inventory as a CSV file.
+The built files will be in the `dist` folder.
 
 ## Tech Stack
 
-- **React 18** + **TypeScript** - Modern, type-safe frontend
-- **Vite** - Fast development and build tooling
-- **AG Grid Community** - Powerful spreadsheet functionality
-- **Papa Parse** - Robust CSV parsing
-- **Dexie.js** - IndexedDB wrapper for local storage
-- **Tailwind CSS** - Utility-first styling
+- **React 18** + **TypeScript** -- Type-safe component-driven UI
+- **Vite** -- Fast dev server and production bundler
+- **AG Grid Community** -- Spreadsheet-grade data grid
+- **Papa Parse** -- Robust CSV parsing
+- **Dexie.js** -- IndexedDB wrapper for offline-first local storage
+- **Tailwind CSS** -- Utility-first styling
+- **html5-qrcode** -- Barcode / QR code scanning via camera
+- **GitHub Pages** -- Static hosting via GitHub Actions
 
-## Data Model
+## Deployment
 
-Each inventory item contains:
-- `location` - Storage location (e.g., "A1", "Warehouse B")
-- `fbpn` - Part number (sorted numerically)
-- `itemType` - Item category or description
+This project is configured to deploy automatically to GitHub Pages on every push to the `main` (or `master`) branch via the workflow in `.github/workflows/deploy.yml`.
+
+To enable GitHub Pages for your fork:
+
+1. Go to **Settings > Pages** in your GitHub repository.
+2. Under **Build and deployment > Source**, select **GitHub Actions**.
+3. Push to `main` and the site will be live at `https://<your-username>.github.io/Inventory-Auto-Sorter/`.
 
 ## License
 

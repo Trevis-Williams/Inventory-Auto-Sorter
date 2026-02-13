@@ -18,7 +18,7 @@ export function ColumnMapper({ headers, sampleData, onConfirm, onCancel }: Colum
     setMapping(prev => ({ ...prev, [field]: value }))
   }
 
-  const isValid = mapping.location && mapping.fbpn && mapping.itemType
+  const isValid = mapping.location && mapping.partNumber && mapping.itemType
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -46,11 +46,11 @@ export function ColumnMapper({ headers, sampleData, onConfirm, onCancel }: Colum
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            FBPN Column (Part Number)
+            Part Number Column
           </label>
           <select
-            value={mapping.fbpn}
-            onChange={(e) => handleChange('fbpn', e.target.value)}
+            value={mapping.partNumber}
+            onChange={(e) => handleChange('partNumber', e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select a column</option>
@@ -85,7 +85,7 @@ export function ColumnMapper({ headers, sampleData, onConfirm, onCancel }: Colum
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">FBPN</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Part Number</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Type</th>
               </tr>
             </thead>
@@ -96,7 +96,7 @@ export function ColumnMapper({ headers, sampleData, onConfirm, onCancel }: Colum
                     {mapping.location ? row[mapping.location] || '-' : '-'}
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-900">
-                    {mapping.fbpn ? row[mapping.fbpn] || '-' : '-'}
+                    {mapping.partNumber ? row[mapping.partNumber] || '-' : '-'}
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-900">
                     {mapping.itemType ? row[mapping.itemType] || '-' : '-'}

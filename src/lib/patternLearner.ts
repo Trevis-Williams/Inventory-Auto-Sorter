@@ -3,15 +3,15 @@ import {
   LocationStats,
   LearnedShelfOrder,
 } from '../types/inventory'
-import { parseFBPN } from './sequenceAnalyzer'
+import { parsePartNumber } from './sequenceAnalyzer'
 
 /**
- * Convert an FBPN to a numeric value for comparison
+ * Convert a part number to a numeric value for comparison
  * Format: "XX-YYYYYY" -> XX * 1000000 + YYYYYY
- * This preserves the natural ordering of FBPNs
+ * This preserves the natural ordering of part numbers
  */
-export function fbpnToNumeric(fbpn: string): number {
-  const parsed = parseFBPN(fbpn)
+export function partNumberToNumeric(partNumber: string): number {
+  const parsed = parsePartNumber(partNumber)
   if (!parsed.isValid) return 0
   
   // Combine prefix and number into a single sortable value
@@ -57,7 +57,7 @@ export function calculateStdDev(values: number[]): number {
 }
 
 /**
- * Calculate statistics for each location based on the FBPNs stored there
+ * Calculate statistics for each location based on the part numbers stored there
  */
 export function calculateLocationStats(items: InventoryItem[]): LocationStats[] {
   // Group items by location
@@ -75,21 +75,21 @@ export function calculateLocationStats(items: InventoryItem[]): LocationStats[] 
   const stats: LocationStats[] = []
   
   for (const [location, locationItems] of locationGroups) {
-    const fbpnValues = locationItems
-      .map(item => fbpnToNumeric(item.fbpn))
+    const partNumberValues = locationItems
+      .map(item => partNumberToNumeric(item.partNumber))
       .filter(v => v > 0)
     
-    if (fbpnValues.length === 0) continue
+    if (partNumberValues.length === 0) continue
     
     stats.push({
       location,
       itemCount: locationItems.length,
-      fbpnValues,
-      medianFBPN: calculateMedian(fbpnValues),
-      meanFBPN: calculateMean(fbpnValues),
-      stdDev: calculateStdDev(fbpnValues),
-      minFBPN: Math.min(...fbpnValues),
-      maxFBPN: Math.max(...fbpnValues),
+      partNumberValues,
+      medianPartNumber: calculateMedian(partNumberValues),
+      meanPartNumber: calculateMean(partNumberValues),
+      stdDev: calculateStdDev(partNumberValues),
+      minPartNumber: Math.min(...partNumberValues),
+      maxPartNumber: Math.max(...partNumberValues),
       learnedRank: 0, // Will be set after sorting
     })
   }
@@ -98,8 +98,8 @@ export function calculateLocationStats(items: InventoryItem[]): LocationStats[] 
 }
 
 /**
- * Learn the shelf order by ranking locations based on their median FBPN values
- * Locations with lower median FBPNs come first (lower numbered parts)
+ * Learn the shelf order by ranking locations based on their median part number values
+ * Locations with lower median part numbers come first (lower numbered parts)
  */
 export function learnShelfOrder(items: InventoryItem[]): LearnedShelfOrder {
   if (items.length === 0) {
@@ -114,8 +114,8 @@ export function learnShelfOrder(items: InventoryItem[]): LearnedShelfOrder {
   // Calculate stats for each location
   const stats = calculateLocationStats(items)
   
-  // Sort locations by median FBPN (ascending = lower FBPNs first)
-  stats.sort((a, b) => a.medianFBPN - b.medianFBPN)
+  // Sort locations by median part number (ascending = lower part numbers first)
+  stats.sort((a, b) => a.medianPartNumber - b.medianPartNumber)
   
   // Assign ranks
   const locationRankMap = new Map<string, number>()
@@ -138,7 +138,7 @@ export function learnShelfOrder(items: InventoryItem[]): LearnedShelfOrder {
 
 /**
  * Calculate how confident we are in the learned pattern
- * Based on how distinct the median FBPN values are between locations
+ * Based on how distinct the median part number values are between locations
  */
 function calculateLearningConfidence(stats: LocationStats[]): number {
   if (stats.length < 2) return 100
@@ -151,8 +151,8 @@ function calculateLearningConfidence(stats: LocationStats[]): number {
       totalPairs++
       
       // Check if ranges overlap significantly
-      const rangeI = { min: stats[i].minFBPN, max: stats[i].maxFBPN }
-      const rangeJ = { min: stats[j].minFBPN, max: stats[j].maxFBPN }
+      const rangeI = { min: stats[i].minPartNumber, max: stats[i].maxPartNumber }
+      const rangeJ = { min: stats[j].minPartNumber, max: stats[j].maxPartNumber }
       
       // If one range contains part of the other, they overlap
       const overlap = !(rangeI.max < rangeJ.min || rangeJ.max < rangeI.min)
@@ -170,21 +170,21 @@ function calculateLearningConfidence(stats: LocationStats[]): number {
 }
 
 /**
- * Find what rank a given FBPN should have based on its value
+ * Find what rank a given part number should have based on its value
  * Returns the rank of the location it would best fit in
  */
 export function findExpectedRank(
-  fbpnValue: number,
+  partNumberValue: number,
   learnedOrder: LearnedShelfOrder
 ): number {
   if (learnedOrder.locations.length === 0) return 1
   
-  // Find the location whose median is closest to this FBPN value
+  // Find the location whose median is closest to this part number value
   let closestRank = 1
   let closestDistance = Infinity
   
   for (const loc of learnedOrder.locations) {
-    const distance = Math.abs(loc.medianFBPN - fbpnValue)
+    const distance = Math.abs(loc.medianPartNumber - partNumberValue)
     if (distance < closestDistance) {
       closestDistance = distance
       closestRank = loc.learnedRank
@@ -195,29 +195,29 @@ export function findExpectedRank(
 }
 
 /**
- * Check if an FBPN is an outlier for its location
+ * Check if a part number is an outlier for its location
  * Returns deviation info
  */
 export function checkOutlier(
-  fbpnValue: number,
+  partNumberValue: number,
   locationStats: LocationStats,
   threshold: number = 2.0 // Number of standard deviations
 ): { isOutlier: boolean; deviation: number; zScore: number } {
   if (locationStats.stdDev === 0) {
     // No variation at this location, any different value is an outlier
-    const isOutlier = fbpnValue !== locationStats.medianFBPN
+    const isOutlier = partNumberValue !== locationStats.medianPartNumber
     return {
       isOutlier,
-      deviation: Math.abs(fbpnValue - locationStats.medianFBPN),
+      deviation: Math.abs(partNumberValue - locationStats.medianPartNumber),
       zScore: isOutlier ? Infinity : 0,
     }
   }
   
-  const zScore = Math.abs(fbpnValue - locationStats.meanFBPN) / locationStats.stdDev
+  const zScore = Math.abs(partNumberValue - locationStats.meanPartNumber) / locationStats.stdDev
   
   return {
     isOutlier: zScore > threshold,
-    deviation: Math.abs(fbpnValue - locationStats.medianFBPN),
+    deviation: Math.abs(partNumberValue - locationStats.medianPartNumber),
     zScore,
   }
 }
@@ -262,7 +262,7 @@ export function calculateOutOfOrderConfidence(
  * Generate a human-readable suggestion for an out-of-order item
  */
 export function generateSuggestion(
-  _fbpn: string,
+  _partNumber: string,
   _currentLocation: string,
   expectedRank: number,
   actualRank: number,

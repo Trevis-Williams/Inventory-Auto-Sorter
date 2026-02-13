@@ -4,7 +4,7 @@ import { ParsedCSV, ColumnMapping, ColumnMatch } from '../types/inventory'
 // Keywords that map to each field
 const FIELD_KEYWORDS: Record<keyof ColumnMapping, string[]> = {
   location: ['location', 'loc', 'bin', 'warehouse', 'area', 'zone', 'shelf', 'rack', 'position', 'storage'],
-  fbpn: ['fbpn', 'part', 'part number', 'partnumber', 'part_number', 'sku', 'pn', 'p/n', 'item number', 'itemnumber', 'item_number', 'product number', 'productnumber', 'model', 'code'],
+  partNumber: ['part', 'part number', 'partnumber', 'part_number', 'sku', 'pn', 'p/n', 'item number', 'itemnumber', 'item_number', 'product number', 'productnumber', 'model', 'code'],
   itemType: ['item type', 'itemtype', 'item_type', 'type', 'category', 'item', 'description', 'desc', 'product', 'name', 'product type', 'producttype', 'class', 'classification'],
 }
 
@@ -71,7 +71,7 @@ function findBestMatch(header: string, field: keyof ColumnMapping): number {
  * Auto-detect column mappings from CSV headers
  */
 export function autoDetectColumns(headers: string[]): ColumnMapping {
-  const fields: (keyof ColumnMapping)[] = ['location', 'fbpn', 'itemType']
+  const fields: (keyof ColumnMapping)[] = ['location', 'partNumber', 'itemType']
   const matches: ColumnMatch[] = []
 
   // Calculate scores for all header-field combinations
@@ -88,7 +88,7 @@ export function autoDetectColumns(headers: string[]): ColumnMapping {
   // Assign best matches, avoiding duplicates
   const result: ColumnMapping = {
     location: headers[0] || '',
-    fbpn: headers[1] || '',
+    partNumber: headers[1] || '',
     itemType: headers[2] || '',
   }
 
@@ -140,10 +140,10 @@ export function parseCSV(file: File): Promise<ParsedCSV> {
 /**
  * Export inventory items to CSV string
  */
-export function exportToCSV(items: { location: string; fbpn: string; itemType: string }[]): string {
+export function exportToCSV(items: { location: string; partNumber: string; itemType: string }[]): string {
   const csvData = items.map(item => ({
     Location: item.location,
-    FBPN: item.fbpn,
+    'Part Number': item.partNumber,
     'Item Type': item.itemType,
   }))
 

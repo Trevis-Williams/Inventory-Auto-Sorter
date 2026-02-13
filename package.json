@@ -1,8 +1,9 @@
 {
-  "name": "inventory-tracker",
+  "name": "inventory-auto-sorter",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://trevis-williams.github.io/Inventory-Auto-Sorter/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -17,7 +18,8 @@
     "papaparse": "^5.4.1",
     "dexie": "^4.0.4",
     "dexie-react-hooks": "^1.1.7",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "html5-qrcode": "^2.3.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

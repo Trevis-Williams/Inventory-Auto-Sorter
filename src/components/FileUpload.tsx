@@ -115,7 +115,7 @@ export function FileUpload({ onFileUploaded }: FileUploadProps) {
             <span className="text-gray-500"> or drag and drop</span>
           </div>
           <p className="mt-2 text-sm text-gray-500">
-            CSV files with inventory data (Location, FBPN, Item Type)
+            CSV files with inventory data (Location, Part Number, Item Type)
           </p>
         </>
       )}

@@ -1,7 +1,7 @@
 export interface InventoryItem {
   id: string
   location: string
-  fbpn: string
+  partNumber: string
   itemType: string
   createdAt: Date
   updatedAt: Date
@@ -9,7 +9,7 @@ export interface InventoryItem {
 
 export interface NewInventoryItem {
   location: string
-  fbpn: string
+  partNumber: string
   itemType: string
 }
 
@@ -20,7 +20,7 @@ export interface ParsedCSV {
 
 export interface ColumnMapping {
   location: string
-  fbpn: string
+  partNumber: string
   itemType: string
 }
 
@@ -30,8 +30,8 @@ export interface ColumnMatch {
   score: number
 }
 
-// Parsed FBPN structure (e.g., "24-000328" -> prefix: "24", number: 328)
-export interface ParsedFBPN {
+// Parsed part number structure (e.g., "24-000328" -> prefix: "24", number: 328)
+export interface ParsedPartNumber {
   original: string
   prefix: string
   number: number
@@ -41,14 +41,14 @@ export interface ParsedFBPN {
 // Sequence analysis for a single item
 export interface SequenceAnalysis {
   id: string
-  fbpn: string
+  partNumber: string
   location: string
   itemType: string
   isOutOfOrder: boolean
-  expectedBefore: string | null  // FBPN that should come before in global sequence
-  expectedAfter: string | null   // FBPN that should come after in global sequence
-  actualBefore: string | null    // Actual FBPN before at this location
-  actualAfter: string | null     // Actual FBPN after at this location
+  expectedBefore: string | null  // Part number that should come before in global sequence
+  expectedAfter: string | null   // Part number that should come after in global sequence
+  actualBefore: string | null    // Actual part number before at this location
+  actualAfter: string | null     // Actual part number after at this location
 }
 
 // Grouped inventory by location
@@ -74,22 +74,22 @@ export interface LocationCount {
   percentage: number
 }
 
-// Map of FBPN prefix to location counts
+// Map of part number prefix to location counts
 export interface PrefixLocationMap {
   [prefix: string]: LocationCount[]
 }
 
 // Placement suggestion result
 export interface PlacementSuggestion {
-  fbpn: string
+  partNumber: string
   isValid: boolean
   suggestedLocation: string | null
   confidence: number  // 0-100 percentage
   totalSimilarItems: number
-  beforeFBPN: string | null  // FBPN that should come before
-  afterFBPN: string | null   // FBPN that should come after
+  beforePartNumber: string | null  // Part number that should come before
+  afterPartNumber: string | null   // Part number that should come after
   alternativeLocations: LocationCount[]  // Other possible locations
-  existsInInventory: boolean  // Whether this FBPN already exists
+  existsInInventory: boolean  // Whether this part number already exists
   existingLocation: string | null  // Location if it already exists
 }
 
@@ -97,12 +97,12 @@ export interface PlacementSuggestion {
 export interface LocationStats {
   location: string
   itemCount: number
-  fbpnValues: number[]  // Numeric values of FBPNs for calculations
-  medianFBPN: number    // Median FBPN value (for ordering)
-  meanFBPN: number      // Mean FBPN value
-  stdDev: number        // Standard deviation of FBPN values
-  minFBPN: number       // Lowest FBPN at this location
-  maxFBPN: number       // Highest FBPN at this location
+  partNumberValues: number[]  // Numeric values of part numbers for calculations
+  medianPartNumber: number    // Median part number value (for ordering)
+  meanPartNumber: number      // Mean part number value
+  stdDev: number        // Standard deviation of part number values
+  minPartNumber: number       // Lowest part number at this location
+  maxPartNumber: number       // Highest part number at this location
   learnedRank: number   // Rank in the learned shelf order (1 = first shelf)
 }
 
@@ -117,9 +117,9 @@ export interface LearnedShelfOrder {
 // Enhanced sequence analysis with confidence
 export interface EnhancedSequenceAnalysis extends SequenceAnalysis {
   confidence: number           // 0-100: how confident we are this is out of order
-  deviationFromMedian: number  // How far the FBPN is from location's median
-  expectedLocationRank: number // Where this FBPN should be based on its value
-  actualLocationRank: number   // Where this FBPN actually is
+  deviationFromMedian: number  // How far the part number is from location's median
+  expectedLocationRank: number // Where this part number should be based on its value
+  actualLocationRank: number   // Where this part number actually is
   suggestion: string           // Human-readable suggestion
 }
 
@@ -127,4 +127,66 @@ export interface EnhancedSequenceAnalysis extends SequenceAnalysis {
 export interface EnhancedInventoryAnalysis extends InventoryAnalysis {
   learnedOrder: LearnedShelfOrder
   enhancedOutOfOrderItems: EnhancedSequenceAnalysis[]
+}
+
+// ============================================
+// Reorganization Plan Types
+// ============================================
+
+// Misplacement analysis for a single item
+export interface MisplacementAnalysis {
+  item: InventoryItem
+  isMisplaced: boolean
+  priority: 'high' | 'medium' | 'low'
+  confidence: number
+  currentShelfUnit: string
+  currentRank: number
+  suggestedShelfUnit: string | null
+  suggestedRank: number
+  suggestedLocation: string
+  rankDifference: number
+  neighbors: {
+    before: { partNumber: string; location: string } | null
+    after: { partNumber: string; location: string } | null
+  }
+  explanation: string
+}
+
+// A single move instruction in a reorganization plan
+export interface MoveInstruction {
+  id: string
+  partNumber: string
+  fromLocation: string
+  toLocation: string
+  priority: 'high' | 'medium' | 'low'
+  sequence: number
+  completed: boolean
+}
+
+// Complete reorganization plan
+export interface ReorganizationPlan {
+  id: string
+  name: string
+  createdAt: Date
+  moves: MoveInstruction[]
+  summary: {
+    totalMoves: number
+    shelvesAffected: number
+    estimatedMinutes: number
+    highPriority: number
+    mediumPriority: number
+    lowPriority: number
+  }
+  completedMoves: number
+  warnings: string[]
+}
+
+// Shelf statistics for learning
+export interface ShelfStats {
+  shelfUnit: string
+  medianPartNumber: number
+  partNumberRange: { min: number; max: number }
+  itemCount: number
+  rank: number
+  confidence: number
 }

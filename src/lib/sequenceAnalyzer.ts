@@ -1,6 +1,6 @@
 import {
   InventoryItem,
-  ParsedFBPN,
+  ParsedPartNumber,
   SequenceAnalysis,
   LocationGroup,
   EnhancedSequenceAnalysis,
@@ -8,7 +8,7 @@ import {
 } from '../types/inventory'
 import {
   learnShelfOrder,
-  fbpnToNumeric,
+  partNumberToNumeric,
   checkOutlier,
   calculateOutOfOrderConfidence,
   generateSuggestion,
@@ -16,15 +16,15 @@ import {
 } from './patternLearner'
 
 /**
- * Parse an FBPN string into its components
+ * Parse a part number string into its components
  * Format: "XX-XXXXXX" (e.g., "24-000328" -> prefix: "24", number: 328)
  */
-export function parseFBPN(fbpn: string): ParsedFBPN {
-  const match = fbpn.match(/^(\d+)-(\d+)$/)
+export function parsePartNumber(partNumber: string): ParsedPartNumber {
+  const match = partNumber.match(/^(\d+)-(\d+)$/)
   
   if (!match) {
     return {
-      original: fbpn,
+      original: partNumber,
       prefix: '',
       number: 0,
       isValid: false,
@@ -32,7 +32,7 @@ export function parseFBPN(fbpn: string): ParsedFBPN {
   }
 
   return {
-    original: fbpn,
+    original: partNumber,
     prefix: match[1],
     number: parseInt(match[2], 10),
     isValid: true,
@@ -40,14 +40,14 @@ export function parseFBPN(fbpn: string): ParsedFBPN {
 }
 
 /**
- * Compare two FBPNs for sorting
+ * Compare two part numbers for sorting
  * First by prefix, then by number
  */
-export function compareFBPN(a: string, b: string): number {
-  const parsedA = parseFBPN(a)
-  const parsedB = parseFBPN(b)
+export function comparePartNumber(a: string, b: string): number {
+  const parsedA = parsePartNumber(a)
+  const parsedB = parsePartNumber(b)
 
-  // Invalid FBPNs go to the end
+  // Invalid part numbers go to the end
   if (!parsedA.isValid && !parsedB.isValid) return a.localeCompare(b)
   if (!parsedA.isValid) return 1
   if (!parsedB.isValid) return -1
@@ -62,21 +62,21 @@ export function compareFBPN(a: string, b: string): number {
 }
 
 /**
- * Build a global sorted list of all unique FBPNs
+ * Build a global sorted list of all unique part numbers
  */
-export function buildGlobalFBPNSequence(items: InventoryItem[]): string[] {
-  const uniqueFBPNs = [...new Set(items.map(item => item.fbpn))]
-  return uniqueFBPNs.sort(compareFBPN)
+export function buildGlobalPartNumberSequence(items: InventoryItem[]): string[] {
+  const uniquePartNumbers = [...new Set(items.map(item => item.partNumber))]
+  return uniquePartNumbers.sort(comparePartNumber)
 }
 
 /**
- * Find the expected neighbors for an FBPN in the global sequence
+ * Find the expected neighbors for a part number in the global sequence
  */
 export function findExpectedNeighbors(
-  fbpn: string,
+  partNumber: string,
   globalSequence: string[]
 ): { before: string | null; after: string | null } {
-  const index = globalSequence.indexOf(fbpn)
+  const index = globalSequence.indexOf(partNumber)
   
   if (index === -1) {
     return { before: null, after: null }
@@ -102,16 +102,17 @@ export function groupByLocation(items: InventoryItem[]): Map<string, InventoryIt
     groups.get(location)!.push(item)
   }
 
-  // Sort items within each group by FBPN
+  // Sort items within each group by part number
   for (const [location, locationItems] of groups) {
-    groups.set(location, locationItems.sort((a, b) => compareFBPN(a.fbpn, b.fbpn)))
+    groups.set(location, locationItems.sort((a, b) => comparePartNumber(a.partNumber, b.partNumber)))
   }
 
   return groups
 }
 
 /**
- * Perform full inventory analysis using learned shelf order
+ * Perform full inventory analysis using learned shelf order from data
+ * Order is determined by analyzing part number patterns across shelves
  */
 export function analyzeInventory(items: InventoryItem[]): EnhancedInventoryAnalysis {
   if (items.length === 0) {
@@ -130,11 +131,11 @@ export function analyzeInventory(items: InventoryItem[]): EnhancedInventoryAnaly
     }
   }
 
-  // Learn the shelf order from the data
+  // Learn shelf order from data (median part numbers per shelf)
   const learnedOrder = learnShelfOrder(items)
   
-  // Build global FBPN sequence for neighbor lookup
-  const globalSequence = buildGlobalFBPNSequence(items)
+  // Build global part number sequence for neighbor lookup
+  const globalSequence = buildGlobalPartNumberSequence(items)
 
   // Group items by location
   const locationMap = groupByLocation(items)
@@ -160,14 +161,14 @@ export function analyzeInventory(items: InventoryItem[]): EnhancedInventoryAnaly
     const actualRank = learnedOrder.locationRankMap.get(location) || 0
 
     for (const item of locationItems) {
-      const fbpnValue = fbpnToNumeric(item.fbpn)
+      const partNumberValue = partNumberToNumeric(item.partNumber)
       const { before: expectedBefore, after: expectedAfter } = findExpectedNeighbors(
-        item.fbpn,
+        item.partNumber,
         globalSequence
       )
 
-      // Find what rank this FBPN should be at based on its value
-      const expectedRank = findExpectedRank(fbpnValue, learnedOrder)
+      // Find what rank this part number should be at based on its value
+      const expectedRank = findExpectedRank(partNumberValue, learnedOrder)
 
       // Check if item is an outlier for this location
       let isOutOfOrder = false
@@ -176,7 +177,7 @@ export function analyzeInventory(items: InventoryItem[]): EnhancedInventoryAnaly
       let zScore = 0
 
       if (locationStats) {
-        const outlierCheck = checkOutlier(fbpnValue, locationStats, 2.0)
+        const outlierCheck = checkOutlier(partNumberValue, locationStats, 2.0)
         deviation = outlierCheck.deviation
         zScore = outlierCheck.zScore
 
@@ -201,7 +202,7 @@ export function analyzeInventory(items: InventoryItem[]): EnhancedInventoryAnaly
 
         const baseAnalysis: SequenceAnalysis = {
           id: item.id,
-          fbpn: item.fbpn,
+          partNumber: item.partNumber,
           location: item.location,
           itemType: item.itemType,
           isOutOfOrder: true,
@@ -213,29 +214,33 @@ export function analyzeInventory(items: InventoryItem[]): EnhancedInventoryAnaly
 
         outOfOrderItems.push(baseAnalysis)
 
-        enhancedOutOfOrderItems.push({
+        const enhanced: EnhancedSequenceAnalysis = {
           ...baseAnalysis,
           confidence,
           deviationFromMedian: deviation,
           expectedLocationRank: expectedRank,
           actualLocationRank: actualRank,
           suggestion: generateSuggestion(
-            item.fbpn,
+            item.partNumber,
             item.location,
             expectedRank,
             actualRank,
             learnedOrder
           ),
-        })
+        }
+
+        enhancedOutOfOrderItems.push(enhanced)
       }
     }
 
-    groups.push({
+    const group: LocationGroup = {
       location,
       items: locationItems,
       itemCount: locationItems.length,
       outOfOrderCount,
-    })
+    }
+
+    groups.push(group)
   }
 
   // Sort enhanced out of order items by confidence (highest first)
